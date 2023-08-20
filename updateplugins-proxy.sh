@@ -48,7 +48,8 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 		url=$(jq -r '.files | map(select((.filename|endswith(".jar")) and .primary)) | .[].url' <<< "$resp")
 	;;
 	GITHUB | *)
-		resp=$(curl -s -X GET "https://api.github.com/repos/$(jq -r '.owner' <<< "$dat")/$title/releases/latest")
+		resp=$(curl -s -X GET "https://api.github.com/repos/$(jq -r '.owner' <<< "$dat")/$title/releases")
+		resp=$(jq -r '.[0]' <<< "$resp")
 		vers=$(jq -r '.tag_name' <<< "$resp")
 		url=$(jq -r '.assets | map(select(.name|endswith(".jar"))) | .[].browser_download_url' <<< "$resp")
 	;;
