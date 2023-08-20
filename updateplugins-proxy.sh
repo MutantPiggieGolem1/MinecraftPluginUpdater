@@ -1,8 +1,8 @@
 #!/bin/bash
-# BungeeCord/Waterfall Version
+# Waterfall Version
 FILE="./plugins.json"
 if ! [ -f $FILE ]; then
-	echo "[]" > ./plugins.json
+	echo '[{"source": "WATERFALL", "repo": ""}]' > ./plugins.json
 	echo "Please fill plugins.json."
 	exit 1
 fi
@@ -11,6 +11,13 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 	dat=$(jq ".[$i]" <<< "$data")
 	title=$(jq -r '.repo' <<< "$dat")
 	case $(jq -r '.source // empty' <<< "$dat") in
+	WATERFALL)
+		title="waterfall"
+		mcver=$(curl -s https://api.papermc.io/v2/projects/waterfall/ -H "Accept: application/json" | jq -r '.version_groups | last')
+		build=$(curl -s "https://api.papermc.io/v2/projects/waterfall/versions/$mcver/builds" -H "Accept: application/json" | jq -r '.builds[-1].build')
+		vers="$mcver-$build"
+		url="https://api.papermc.io/v2/projects/waterfall/versions/$mcver/builds/$build/downloads/waterfall-$mcver-$build.jar"
+	;;
 	LUCKPERMS)
 		title="LuckPerms-Bungee"
 		buildurl=$(jq -r ".builds[0].url" <<< "$(curl -s https://ci.lucko.me/job/LuckPerms/api/json)")
@@ -54,8 +61,12 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 		echo "Warning: No asset found for $title"
 		continue
 	fi
-	echo "Updating: $title"
-	curl -L -o "plugins/$title.jar" "$url"
+	echo "Updating: $title -> $vers"
+	if [ "$title" == "waterfall" ]; then
+		curl -L -o "$title.jar" "$url"
+	else
+		curl -L -o "plugins/$title.jar" "$url"
+	fi
 	data=$(jq ".[$i].ver=\"$vers\"" <<< "$data")
 done
 echo "$data" > $FILE

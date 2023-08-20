@@ -54,7 +54,7 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 		echo "Warning: No asset found for $title"
 		continue
 	fi
-	echo "Updating: $title"
+	echo "Updating: $title -> $vers"
 	curl -L -o "plugins/$title.jar" "$url"
 	data=$(jq ".[$i].ver=\"$vers\"" <<< "$data")
 done
