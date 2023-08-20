@@ -16,7 +16,7 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 		temp=$(jq -r ".fileName" <<< "$info")
 		# shellcheck disable=SC2206
 		temp=(${temp//-/ })
-		vers=${temp[-1]/.jar/ }
+		vers=${temp[-1]/.jar/}
 		url="${buildurl}artifact/$(jq -r ".relativePath" <<< "$info")"
 	;;
 	SPIGOT)
