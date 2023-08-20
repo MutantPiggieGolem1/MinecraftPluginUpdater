@@ -1,4 +1,5 @@
 #!/bin/bash
+# Paper Version
 FILE="./plugins.json"
 if ! [ -f $FILE ]; then
 	echo "[]" > ./plugins.json
@@ -11,6 +12,7 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 	title=$(jq -r '.repo' <<< "$dat")
 	case $(jq -r '.source // empty' <<< "$dat") in
 	LUCKPERMS)
+		title="LuckPerms-Bukkit"
 		buildurl=$(jq -r ".builds[0].url" <<< "$(curl -s https://ci.lucko.me/job/LuckPerms/api/json)")
 		info=$(jq -r '.artifacts | map(select((.fileName|startswith("LuckPerms-Bukkit-")) and (.fileName|startswith("LuckPerms-Bukkit-Legacy-")|not))) | .[]' <<< "$(curl -s "${buildurl}api/json")")
 		temp=$(jq -r ".fileName" <<< "$info")
