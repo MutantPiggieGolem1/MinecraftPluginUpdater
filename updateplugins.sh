@@ -10,7 +10,16 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 	dat=$(jq ".[$i]" <<< "$data")
 	title=$(jq -r '.repo' <<< "$dat")
 	case $(jq -r '.source // empty' <<< "$dat") in
-			SPIGOT)
+	LUCKPERMS)
+		buildurl=$(jq -r ".builds[0].url" <<< "$(curl -s https://ci.lucko.me/job/LuckPerms/api/json)")
+		info=$(jq -r '.artifacts | map(select((.fileName|startswith("LuckPerms-Bukkit-")) and (.fileName|startswith("LuckPerms-Bukkit-Legacy-")|not))) | .[]' <<< "$(curl -s "${buildurl}api/json")")
+		temp=$(jq -r ".fileName" <<< "$info")
+		# shellcheck disable=SC2206
+		temp=(${temp//-/ })
+		vers=${temp[-1]/.jar/ }
+		url="${buildurl}artifact/$(jq -r ".relativePath" <<< "$info")"
+	;;
+	SPIGOT)
 		id=$(jq -r '.id // empty' <<< "$dat")
 		if [ -z "$id" ]; then
 			id=$(jq -r '.[0].id' <<< "$(curl -s -X GET "https://api.spiget.org/v2/search/resources/$title?field=name&size=1")")
@@ -21,32 +30,24 @@ for (( i=0 ; i<$(jq length $FILE) ; i++ )); do
 			data=$(jq ".[$i].id=$id" <<< "$data")
 		fi
 		vers=$(jq -r '.id' <<< "$(curl -s -X GET "https://api.spiget.org/v2/resources/$id/versions/latest")")
-		if [ "$(jq 'has("ver")' <<< "$dat")" = "true" ] && [ "$vers" = "$(jq -r '.ver' <<< "$dat")" ]; then
-			echo "Up To Date: [$title $vers] $id"
-			continue
-		fi
-		url="https://api.spiget.org/v2/resources/$id/download"
-			;;
-			MODRINTH)
+		url="https://api.spiget.org/v2/resources/$id/download" # this doesnt directly reference the version because when that happens the jars dont download
+	;;
+	MODRINTH)
 		resp=$(curl -sg -X GET "https://api.modrinth.com/v2/project/$title/version?loaders=[%22bukkit%22,%22spigot%22,%22paper%22]&version_type=release")
 		resp=$(jq -r '.[0]' <<< "$resp")
 		vers=$(jq -r '.version_number' <<< "$resp")
-		if [ "$(jq 'has("ver")' <<< "$dat")" = "true" ] && [ "$vers" = "$(jq -r '.ver' <<< "$dat")" ]; then
-			echo "Up To Date: [$title $vers]"
-			continue
-		fi
 		url=$(jq -r '.files | map(select((.filename|endswith(".jar")) and .primary)) | .[].url' <<< "$resp")
-			;;
-			GITHUB | *)
+	;;
+	GITHUB | *)
 		resp=$(curl -s -X GET "https://api.github.com/repos/$(jq -r '.owner' <<< "$dat")/$title/releases/latest")
 		vers=$(jq -r '.tag_name' <<< "$resp")
-		if [ "$(jq -r 'has("ver")' <<< "$dat")" = "true" ] && [ "$vers" = "$(jq -r '.ver' <<< "$dat")" ]; then
-				echo "Up To Date: [$title $vers]"
-				continue
-		fi
 		url=$(jq -r '.assets | map(select(.name|endswith(".jar"))) | .[].browser_download_url' <<< "$resp")
-			;;
+	;;
 	esac
+	if [ "$(jq -r 'has("ver")' <<< "$dat")" = "true" ] && [ "$vers" = "$(jq -r '.ver' <<< "$dat")" ]; then
+		echo "Up To Date: [$title $vers]"
+		continue
+	fi
 	if [ -z "$url" ]; then
 		echo "Warning: No asset found for $title"
 		continue
